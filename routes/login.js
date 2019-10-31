@@ -7,9 +7,28 @@ var hydra = require('../services/hydra')
 var csrf = require('csurf');
 var csrfProtection = csrf({ cookie: true });
 
+var fs = require('fs');
+try {
+    var shibHeaderSecret = fs.readFileSync('/run/secrets/shib_header_secret', 'ascii');
+     shibHeaderSecret = shibHeaderSecret.replace(/\n$/, '')
+} catch(e) {
+    console.log('Error:', e.stack);
+}
+
 router.get('/', csrfProtection, function (req, res, next) {
   // Parses the URL query
   var query = url.parse(req.url, true).query;
+  var eppn = req.headers['x-shib-remote-user'];
+
+  console.log(req.headers);
+
+  if (req.headers['x-shib-secret'] === shibHeaderSecret) {
+     console.log('Validated X-Shib-Secret header');
+  } else {
+     throw new Error('Attempt to spoof headers detected');
+  }
+
+  console.log("GET request from " + eppn);
 
   // The challenge is used to fetch information about the login request from ORY Hydra.
   var challenge = query.login_challenge;
@@ -38,6 +57,7 @@ router.get('/', csrfProtection, function (req, res, next) {
       res.render('login', {
         csrfToken: req.csrfToken(),
         challenge: challenge,
+        eppn: eppn,
       });
     })
     // This will handle any error that happens when making HTTP calls to hydra
@@ -50,25 +70,10 @@ router.post('/', csrfProtection, function (req, res, next) {
   // The challenge is now a hidden input field, so let's take it from the request body instead
   var challenge = req.body.challenge;
 
-  // Let's check if the user provided valid credentials. Of course, you'd use a database or some third-party service
-  // for this!
-  if (!(req.body.email === 'foo@bar.com' && req.body.password === 'foobar')) {
-    // Looks like the user provided invalid credentials, let's show the ui again...
-
-    res.render('login', {
-      csrfToken: req.csrfToken(),
-
-      challenge: challenge,
-
-      error: 'The username / password combination is not correct'
-    });
-    return;
-  }
-
   // Seems like the user authenticated! Let's tell hydra...
   hydra.acceptLoginRequest(challenge, {
     // Subject is an alias for user ID. A subject can be a random string, a UUID, an email address, ....
-    subject: 'foo@bar.com',
+    subject: req.body.eppn,
 
     // This tells hydra to remember the browser and automatically authenticate the user in future requests. This will
     // set the "skip" parameter in the other route to true on subsequent requests!

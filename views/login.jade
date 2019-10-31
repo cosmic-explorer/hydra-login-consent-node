@@ -1,24 +1,18 @@
 extends layout
 
 block content
-    h1 Please log in
+    h1 Cosmic Explorer DCC OAuth2 Login
     if error
         p.
             #{error}
+
+    p.
+        Got authenticated Shibboleth request from ePPN #{eppn}. Click Log in to continue.
+
     form(action="/login",method="POST")
         input(type="hidden",name="_csrf",value=csrfToken)
         input(type="hidden",name="challenge",value=challenge)
-        table(style="")
-            tr
-                td
-                    input(type="email",id="email",name="email",placeholder="email@foobar.com")
-                td.
-                    (it's "foo@bar.com")
-            tr
-                td
-                    input(type="password",id="password",name="password")
-                td.
-                    (it's "foobar")
+        input(type="hidden",name="eppn",value=eppn)
         input(type="checkbox",id="remember",name="remember",value="1")
         label(for="remember") Remember me
         br
