@@ -20,8 +20,6 @@ router.get('/', csrfProtection, function (req, res, next) {
   var query = url.parse(req.url, true).query;
   var eppn = req.headers['x-shib-remote-user'];
 
-  console.log(req.headers);
-
   if (req.headers['x-shib-secret'] === shibHeaderSecret) {
      console.log('Validated X-Shib-Secret header');
   } else {
